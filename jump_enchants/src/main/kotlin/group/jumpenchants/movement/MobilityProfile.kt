@@ -60,7 +60,7 @@ object DefaultProfiles {
             initialHorizontalImpulse = 0.26,
             sustainHorizontalAcceleration = 0.040,
             sustainVerticalCorrection = 0.80,
-            budgetTicks = 40,
+            budgetTicks = 32,
             steering = 0.45,
             maxHorizontalSpeed = 1.1,
             minimumGlideSpeed = 0.0,

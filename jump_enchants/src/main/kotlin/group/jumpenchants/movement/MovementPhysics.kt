@@ -21,12 +21,6 @@ object MovementPhysics {
     fun hunterExtraJumpVelocity(verticalImpulse: Double, tuning: PhysicsTuning) =
         clampVertical(verticalImpulse, tuning)
 
-    fun titanActivationVelocity(
-        currentY: Double,
-        profile: MobilityProfile,
-        tuning: PhysicsTuning
-    ): Double = clampVertical(currentY + profile.initialVerticalImpulse, tuning)
-
     fun titanSustainVelocity(
         currentY: Double,
         directionalAccelerationY: Double,

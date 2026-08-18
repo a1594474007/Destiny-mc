@@ -166,9 +166,14 @@ object MovementController {
         consumeActivationCost(state)
 
         val motion = authoritativeMotion(player, state)
-        val newY = MovementPhysics.titanActivationVelocity(
-            motion.y,
-            profile,
+        val burstMultiplier = if (state.extraJumpsUsed == 0) {
+            1.0
+        } else {
+            JumpConfig.titanBurstDecayMultiplier.get().coerceIn(0.1, 1.0)
+        }
+        state.extraJumpsUsed++
+        val newY = MovementPhysics.clampVertical(
+            motion.y + profile.initialVerticalImpulse * burstMultiplier,
             JumpConfig.physicsTuning()
         )
         val thrustDirection = state.capturedDirection

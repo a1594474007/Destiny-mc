@@ -122,6 +122,9 @@ object JumpConfig {
         titanBurstGlideSoftening = builder
             .comment("喷气后缓落时削减下落速度的比例 (0=无缓落, 0.95=接近悬停)")
             .defineInRange("burstGlideSoftening", 0.6, 0.0, 0.95)
+        titanBurstDecayMultiplier = builder
+            .comment("第一次喷气后，后续每次喷气的冲量倍率 (0.5=减半)")
+            .defineInRange("burstDecayMultiplier", 0.5, 0.1, 1.0)
         builder.pop()
         builder.push("abilities")
         registerAbilityProfiles(JobType.TITAN)
