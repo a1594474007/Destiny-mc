@@ -6,9 +6,7 @@ import group.jumpenchants.state.JumpState
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.phys.Vec3
-import kotlin.math.PI
 import kotlin.math.max
-import kotlin.math.pow
 
 object MovementController {
     enum class ActionResult {
@@ -86,12 +84,7 @@ object MovementController {
     ): ActionResult {
         if (!canUse(player) || !state.airborne) return ActionResult.REJECTED
         return when (mode.jobType) {
-            JobType.TITAN -> if (state.specialActivationUsed) {
-                state.abilityActive = false
-                ActionResult.CANCELLED
-            } else {
-                activateTitan(player, state, mode)
-            }
+            JobType.TITAN -> activateTitan(player, state, mode)
             JobType.WARLOCK -> if (mode.isBlink) {
                 activateBlink(player, state, mode)
             } else if (state.specialActivationUsed) {
@@ -116,13 +109,24 @@ object MovementController {
         }
 
         state.airborneTicks++
+        tickBurstGlide(player, state)
         tickHunterFirstJumpHold(player, state, mode)
 
         if (!state.abilityActive || state.budgetRemaining <= 0) return
         when (mode.jobType) {
-            JobType.TITAN -> tickTitan(player, state, mode)
+            JobType.TITAN -> Unit
             JobType.WARLOCK -> if (!mode.isBlink) tickWarlock(player, state, mode)
             JobType.HUNTER -> Unit
+        }
+    }
+
+    private fun tickBurstGlide(player: Player, state: JumpState) {
+        if (state.burstGraceTicks <= 0) return
+        state.burstGraceTicks--
+        val motion = authoritativeMotion(player, state)
+        if (motion.y < 0.0) {
+            val softening = JumpConfig.titanBurstGlideSoftening.get().coerceIn(0.0, 1.0)
+            setMotion(player, Vec3(motion.x, motion.y * (1.0 - softening), motion.z))
         }
     }
 
@@ -153,88 +157,30 @@ object MovementController {
         mode: MobilityMode
     ): ActionResult {
         val profile = JumpConfig.profile(mode)
-        if (state.airborneTicks > JumpConfig.titanActivationWindowTicks.get()) return ActionResult.REJECTED
         if (!ensureBudget(state, profile)) return ActionResult.REJECTED
 
         state.abilityActive = true
-        state.specialActivationUsed = true
         state.capturedViewYaw = player.yRot
         state.capturedViewPitch = player.xRot
-        val motion = authoritativeMotion(player, state)
-        state.fallingActivation = motion.y <= 0.0
         state.capturedDirection = player.lookAngle.normalize()
         consumeActivationCost(state)
 
+        val motion = authoritativeMotion(player, state)
         val newY = MovementPhysics.titanActivationVelocity(
             motion.y,
             profile,
-            state.fallingActivation,
             JumpConfig.physicsTuning()
         )
         val thrustDirection = state.capturedDirection
         val directionalImpulse = MovementMath.horizontal(thrustDirection)
             .scale(profile.initialHorizontalImpulse * profile.propulsionFactor)
-        var boosted = Vec3(motion.x, newY, motion.z).add(directionalImpulse)
-        if (state.fallingActivation) {
-            boosted = Vec3(
-                boosted.x,
-                minOf(JumpConfig.titanFallingVelocityFloor.get(), boosted.y),
-                boosted.z
-            )
-        }
-        boosted = MovementMath.clampHorizontal(
-            boosted,
-            profile.maxHorizontalSpeed * profile.propulsionFactor
-        )
+        val boosted = Vec3(motion.x + directionalImpulse.x, newY, motion.z + directionalImpulse.z)
+            .let { MovementMath.clampHorizontal(it, profile.maxHorizontalSpeed * profile.propulsionFactor) }
         setMotion(player, boosted)
-        if (state.fallingActivation) {
-            player.fallDistance = max(
-                0.0f,
-                player.fallDistance -
-                    (profile.fallingCushion * JumpConfig.titanFallDistanceReductionMultiplier.get()).toFloat()
-            )
-        }
-        return ActionResult.ACCEPTED
-    }
 
-    private fun tickTitan(player: Player, state: JumpState, mode: MobilityMode) {
-        val profile = JumpConfig.profile(mode)
-        val motion = authoritativeMotion(player, state)
-        val targetDirection = player.lookAngle.normalize()
-        val maxTurnRadians =
-            JumpConfig.titanTurnAngularVelocityDegreesPerTick.get() *
-                profile.steering * PI / 180.0
-        state.capturedDirection = MovementMath.rotateTowards(
-            state.capturedDirection,
-            targetDirection,
-            maxTurnRadians
-        )
-        val poweredTicks = (profile.budgetTicks - state.budgetRemaining).coerceAtLeast(0)
-        val decay = (1.0 - profile.propulsionDecayPerTick)
-            .coerceIn(0.0, 1.0)
-            .pow(poweredTicks)
-        val horizontalFactor = max(decay, profile.minimumHorizontalPropulsionFactor)
-        val baseAcceleration = profile.sustainHorizontalAcceleration * profile.propulsionFactor
-        val verticalCorrection = MovementPhysics.titanVerticalCorrection(
-            motion.y,
-            state.capturedDirection.y,
-            state.fallingActivation,
-            JumpConfig.titanHoverDescentSpeed.get(),
-            JumpConfig.titanLookVerticalSpeed.get(),
-            JumpConfig.titanMaxVerticalCorrection.get() * profile.sustainVerticalCorrection,
-            JumpConfig.physicsTuning()
-        )
-        val thrust = Vec3(
-            state.capturedDirection.x * baseAcceleration * horizontalFactor,
-            verticalCorrection,
-            state.capturedDirection.z * baseAcceleration * horizontalFactor
-        )
-        val next = MovementMath.clampHorizontal(
-            motion.add(thrust),
-            profile.maxHorizontalSpeed * profile.propulsionFactor
-        )
-        setMotion(player, next)
-        consumeTick(state)
+        state.burstGraceTicks = JumpConfig.titanBurstGraceTicks.get()
+        player.fallDistance = 0.0f
+        return ActionResult.ACCEPTED
     }
 
     private fun activateWarlock(
@@ -392,11 +338,6 @@ object MovementController {
     private fun consumeActivationCost(state: JumpState) {
         val mode = state.mode ?: return
         state.budgetRemaining = max(0, state.budgetRemaining - JumpConfig.activationCostTicks(mode))
-        if (state.budgetRemaining == 0) state.abilityActive = false
-    }
-
-    private fun consumeTick(state: JumpState) {
-        state.budgetRemaining = max(0, state.budgetRemaining - 1)
         if (state.budgetRemaining == 0) state.abilityActive = false
     }
 

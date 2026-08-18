@@ -37,6 +37,8 @@ object JumpConfig {
     val titanHoverDescentSpeed: ForgeConfigSpec.DoubleValue
     val titanLookVerticalSpeed: ForgeConfigSpec.DoubleValue
     val titanMaxVerticalCorrection: ForgeConfigSpec.DoubleValue
+    val titanBurstGraceTicks: ForgeConfigSpec.IntValue
+    val titanBurstGlideSoftening: ForgeConfigSpec.DoubleValue
     val warlockFallingRecoveryFraction: ForgeConfigSpec.DoubleValue
     val warlockLookWeight: ForgeConfigSpec.DoubleValue
     val warlockInputWeight: ForgeConfigSpec.DoubleValue
@@ -86,8 +88,8 @@ object JumpConfig {
         builder.push("titan")
         builder.push("characteristics")
         titanActivationCostTicks = builder
-            .comment("启动喷射时扣除的燃料 (tick)")
-            .defineInRange("activationCostTicks", 2, 0, 20)
+            .comment("每次喷气消耗的燃料 (tick)")
+            .defineInRange("activationCostTicks", 8, 1, 60)
         titanFallingVelocityFloor = builder.comment("下降喷射时允许达到的最高 Y 速度, 取值不得大于 0")
             .defineInRange("fallingVelocityFloor", -0.02, -2.0, 0.0)
         titanFallingRecoveryFraction = builder.comment("下降启动时最多消除的下坠速度比例")
@@ -114,6 +116,12 @@ object JumpConfig {
         titanMaxVerticalCorrection = builder
             .comment("每 tick 允许修正的最大纵向速度")
             .defineInRange("maxVerticalCorrection", 0.08, 0.0, 1.0)
+        titanBurstGraceTicks = builder
+            .comment("喷气后滞空缓落的持续时长 (tick)")
+            .defineInRange("burstGraceTicks", 20, 0, 100)
+        titanBurstGlideSoftening = builder
+            .comment("喷气后缓落时削减下落速度的比例 (0=无缓落, 0.95=接近悬停)")
+            .defineInRange("burstGlideSoftening", 0.6, 0.0, 0.95)
         builder.pop()
         builder.push("abilities")
         registerAbilityProfiles(JobType.TITAN)

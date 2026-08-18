@@ -23,6 +23,7 @@ class JumpState {
     var budgetRemaining = 0
     var startupTicksRemaining = 0
     var fallingActivation = false
+    var burstGraceTicks = 0
     var capturedDirection: Vec3 = Vec3.ZERO
     var lastInputSequence = -1
     var nextClientSequence = 0
@@ -73,6 +74,7 @@ class JumpState {
         budgetRemaining = 0
         startupTicksRemaining = 0
         fallingActivation = false
+        burstGraceTicks = 0
         capturedDirection = Vec3.ZERO
     }
 
@@ -93,6 +95,7 @@ class JumpState {
         budgetRemaining = 0
         startupTicksRemaining = 0
         fallingActivation = false
+        burstGraceTicks = 0
         capturedDirection = Vec3.ZERO
     }
 }

@@ -24,16 +24,8 @@ object MovementPhysics {
     fun titanActivationVelocity(
         currentY: Double,
         profile: MobilityProfile,
-        falling: Boolean,
         tuning: PhysicsTuning
-    ): Double = clampVertical(
-        if (falling) {
-            min(tuning.titanFallingVelocityFloor, currentY + profile.initialVerticalImpulse)
-        } else {
-            currentY + profile.initialVerticalImpulse
-        },
-        tuning
-    )
+    ): Double = clampVertical(currentY + profile.initialVerticalImpulse, tuning)
 
     fun titanSustainVelocity(
         currentY: Double,
