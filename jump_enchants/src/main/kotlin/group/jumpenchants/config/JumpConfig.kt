@@ -39,6 +39,7 @@ object JumpConfig {
     val titanMaxVerticalCorrection: ForgeConfigSpec.DoubleValue
     val titanBurstGraceTicks: ForgeConfigSpec.IntValue
     val titanBurstGlideSoftening: ForgeConfigSpec.DoubleValue
+    val titanBurstDecayMultiplier: ForgeConfigSpec.DoubleValue
     val warlockFallingRecoveryFraction: ForgeConfigSpec.DoubleValue
     val warlockLookWeight: ForgeConfigSpec.DoubleValue
     val warlockInputWeight: ForgeConfigSpec.DoubleValue
